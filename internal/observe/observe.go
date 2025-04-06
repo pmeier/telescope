@@ -1,67 +1,109 @@
 package observe
 
 import (
-	"os"
+	"math"
 	"time"
 
 	"github.com/pmeier/redgiant"
-	"github.com/pmeier/telescope/internal/config"
-
+	"github.com/pmeier/telescope/internal/summary"
 	"github.com/rs/zerolog"
 )
 
-func Run(c config.Config) error {
-	log := zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr}).With().Timestamp().Logger().Level(zerolog.InfoLevel)
-
-	var th TickHandler = &SummaryTickHandler{
-		Log: log,
-		QTHS: map[SummaryQuantity]float64{
-			GridPower:    50,
-			BatteryPower: 50,
-			PVPower:      50,
-			LoadPower:    50,
-			BatteryLevel: 0.5e-2},
-		TW: ExponentialCutoffThresholdWeighter{D: time.Minute * 5, C: 4},
-	}
-
-	sg := redgiant.NewSungrow(c.Sungrow.Host, c.Sungrow.Username, c.Sungrow.Password, redgiant.WithLogger(log))
-	rg := redgiant.NewRedgiant(sg, redgiant.WithLogger(log))
-	if err := rg.Connect(); err != nil {
-		return err
-	}
-	defer rg.Close()
-
-	db := NewDB(c.Database.Host, c.Database.Port, c.Database.Username, c.Database.Password, c.Database.Name)
-
-	if qs, ds, err := th.Setup(rg); err != nil {
-		return err
-	} else {
-		db.Save(qs)
-		if len(ds) > 0 {
-			db.Create(ds)
-		}
-	}
-
-	for t := range ticks(time.Second * 5) {
-		if ds, err := th.Tick(t); err != nil {
-			return err
-		} else if len(ds) > 0 {
-			db.Create(ds)
-		}
-	}
-
-	return nil
+type timestampedValue struct {
+	T time.Time
+	V float32
 }
 
-func ticks(d time.Duration) <-chan time.Time {
-	t := make(chan time.Time)
+type timestampedSummary struct {
+	lastTick time.Time
+	tvs      map[summary.Quantity]timestampedValue
+}
 
-	go func() {
-		t <- time.Now()
-		for now := range time.NewTicker(d).C {
-			t <- now
+type SummaryTickHandler struct {
+	Log                zerolog.Logger
+	QuantityThresholds map[summary.Quantity]float64
+	TW                 ThresholdWeighter
+	rg                 *redgiant.Redgiant
+	quantityIDS        map[summary.Quantity]uint
+	deviceID           int
+	ts                 timestampedSummary
+}
+
+func (th *SummaryTickHandler) Setup(rg *redgiant.Redgiant) ([]*Quantity, []*Data, error) {
+	th.rg = rg
+
+	qids := map[summary.Quantity]uint{}
+	qs := []*Quantity{}
+	for i, sq := range summary.Quantities() {
+		id := uint(i) + 1
+		qids[sq] = id
+
+		qs = append(qs, &Quantity{ID: id, Name: sq.Name(), Unit: sq.Unit()})
+
+	}
+	th.quantityIDS = qids
+
+	deviceID, err := summary.GetDeviceID(rg)
+	if err != nil {
+		return nil, nil, err
+	}
+	th.deviceID = deviceID
+
+	t := time.Now()
+	s, err := summary.Compute(rg, deviceID)
+	if err != nil {
+		return nil, nil, err
+	}
+	tvs := make(map[summary.Quantity]timestampedValue, len(s))
+	ds := make([]*Data, 0, len(s))
+	for q, v := range s {
+		tvs[q] = timestampedValue{T: t, V: v}
+		ds = append(ds, &Data{Timestamp: t, QuantityID: qids[q], Value: v})
+	}
+	th.ts = timestampedSummary{lastTick: t, tvs: tvs}
+
+	return qs, ds, nil
+}
+
+func (th *SummaryTickHandler) Tick(t time.Time) ([]*Data, error) {
+	s, err := summary.Compute(th.rg, th.deviceID)
+	if err != nil {
+		return nil, err
+	}
+
+	ds := []*Data{}
+	for q, v := range s {
+		tv := th.ts.tvs[q]
+		if math.Abs(float64(tv.V-v)) <= th.QuantityThresholds[q]*th.TW.Weight(t.Sub(tv.T)) {
+			continue
 		}
-	}()
 
-	return t
+		qid := th.quantityIDS[q]
+		ds = append(ds, &Data{Timestamp: th.ts.lastTick, QuantityID: qid, Value: tv.V})
+		ds = append(ds, &Data{Timestamp: t, QuantityID: qid, Value: v})
+		th.ts.tvs[q] = timestampedValue{T: t, V: v}
+	}
+
+	th.ts.lastTick = t
+
+	return ds, nil
+}
+
+type ThresholdWeighter interface {
+	Weight(d time.Duration) float64
+}
+
+type ExponentialCutoffThresholdWeighter struct {
+	D time.Duration
+	C float64
+}
+
+func (w ExponentialCutoffThresholdWeighter) Weight(d time.Duration) float64 {
+	// w(d <= D) = 1
+	// w(d = 2*D) = 1 / C
+	// w(d -> oo) -> 0
+	if d <= w.D {
+		return 1.0
+	}
+	return math.Pow(w.C, 1.0-(d.Seconds()/w.D.Seconds()))
 }
