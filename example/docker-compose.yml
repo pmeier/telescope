@@ -1,0 +1,52 @@
+name: telescope-example
+
+volumes:
+  postgres_data:
+
+services:
+  postgres:
+    container_name: postgres
+    image: postgres:17
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    volumes:
+      - "postgres_data:/var/lib/postgresql/data"
+    healthcheck:
+      test: pg_isready --username postgres || exit 1
+      start_period: 10s
+      start_interval: 1s
+      interval: 10s
+      timeout: 3s
+      retries: 2
+
+  telescope:
+    container_name: telescope
+    image: ghcr.io/pmeier/telescope:latest
+    depends_on:
+      postgres:
+        condition: service_healthy
+        restart: true
+    environment:
+      SUNGROW_HOST: ${SUNGROW_HOST}
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: password
+      DATABASE_NAME: postgres
+    volumes:
+      - "./telescope/telescope.toml:/etc/telescope/telescope.toml:ro"
+    restart: unless-stopped
+
+  grafana:
+    container_name: grafana
+    image: grafana/grafana:latest
+    depends_on:
+      postgres:
+        condition: service_healthy
+        restart: true
+    ports:
+      - "3000:3000"
+    volumes:
+      - "./grafana/grafana.ini:/etc/grafana/grafana.ini:ro"
+      - "./grafana/provisioning:/etc/grafana/provisioning:ro"
+      - "./grafana/dashboards:/var/lib/grafana/dashboards:ro"
+    restart: unless-stopped

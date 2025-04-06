@@ -1,0 +1,15 @@
+[telescope]
+host = '0.0.0.0'
+port = 80
+
+[sungrow]
+host = '{{ default "" .SUNGROW_HOST }}'
+username = '{{ default "user" .SUNGROW_USERNAME }}'
+password = '{{ default "pw1111" .SUNGROW_PASSWORD }}'
+
+[database]
+host = 'postgres'
+port = 5432
+username = '{{ default "" .DATABASE_USER }}'
+password = '{{ default "" .DATABASE_PASSWORD }}'
+name = '{{ default "" .DATABASE_NAME }}'
