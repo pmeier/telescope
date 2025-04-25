@@ -20,6 +20,12 @@ services:
       timeout: 3s
       retries: 2
 
+  redgiant:
+    container_name: redgiant
+    image: ghcr.io/pmeier/redgiant:latest
+    environment:
+      SUNGROW_HOST: ${SUNGROW_HOST}
+
   telescope:
     container_name: telescope
     image: ghcr.io/pmeier/telescope:latest
@@ -28,7 +34,7 @@ services:
         condition: service_healthy
         restart: true
     environment:
-      SUNGROW_HOST: ${SUNGROW_HOST}
+      REDGIANT_HOST: redgiant
       DATABASE_USER: postgres
       DATABASE_PASSWORD: password
       DATABASE_NAME: postgres

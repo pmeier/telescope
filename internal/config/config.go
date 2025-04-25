@@ -17,10 +17,8 @@ type TelescopeConfig struct {
 	Port uint   `validate:"required"`
 }
 
-type SungrowConfig struct {
-	Host     string `validate:"required"`
-	Username string `validate:"required"`
-	Password string `validate:"required"`
+type RedgiantConfig struct {
+	Host string `validate:"required"`
 }
 
 type DatabaseConfig struct {
@@ -33,7 +31,7 @@ type DatabaseConfig struct {
 
 type Config struct {
 	Telescope TelescopeConfig
-	Sungrow   SungrowConfig
+	Redgiant  RedgiantConfig
 	Database  DatabaseConfig
 }
 
@@ -80,21 +78,5 @@ func envVarTemplating() mapstructure.DecodeHookFuncType {
 		default:
 			return v, nil
 		}
-
-		// if f.Kind() != reflect.String {
-		// 	return data, nil
-		// }
-
-		// tpl, err := template.New("").Parse(data.(string))
-		// if err != nil {
-		// 	return nil, err
-		// }
-
-		// var b bytes.Buffer
-		// if err := tpl.Execute(&b, e); err != nil {
-		// 	return nil, err
-		// }
-
-		// return b.String(), nil
 	}
 }

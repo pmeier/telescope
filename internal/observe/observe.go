@@ -4,7 +4,7 @@ import (
 	"math"
 	"time"
 
-	"github.com/pmeier/redgiant"
+	rghttp "github.com/pmeier/redgiant/http"
 	"github.com/pmeier/telescope/internal/summary"
 	"github.com/rs/zerolog"
 )
@@ -23,13 +23,13 @@ type SummaryTickHandler struct {
 	Log                zerolog.Logger
 	QuantityThresholds map[summary.Quantity]float64
 	TW                 ThresholdWeighter
-	rg                 *redgiant.Redgiant
+	rg                 *rghttp.Client
 	quantityIDS        map[summary.Quantity]uint
 	deviceID           int
 	ts                 timestampedSummary
 }
 
-func (th *SummaryTickHandler) Setup(rg *redgiant.Redgiant) ([]*Quantity, []*Data, error) {
+func (th *SummaryTickHandler) Setup(rg *rghttp.Client) ([]*Quantity, []*Data, error) {
 	th.rg = rg
 
 	qids := map[summary.Quantity]uint{}

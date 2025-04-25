@@ -4,7 +4,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/pmeier/redgiant"
+	rghttp "github.com/pmeier/redgiant/http"
+
 	"github.com/pmeier/telescope/internal/config"
 	"github.com/pmeier/telescope/internal/summary"
 
@@ -25,12 +26,7 @@ func Run(c config.Config) error {
 		TW: ExponentialCutoffThresholdWeighter{D: time.Minute * 5, C: 2},
 	}
 
-	sg := redgiant.NewSungrow(c.Sungrow.Host, c.Sungrow.Username, c.Sungrow.Password, redgiant.WithLogger(log))
-	rg := redgiant.NewRedgiant(sg, redgiant.WithLogger(log))
-	if err := rg.Connect(); err != nil {
-		return err
-	}
-	defer rg.Close()
+	rg := rghttp.NewClient(c.Redgiant.Host)
 
 	db := NewDB(c.Database.Host, c.Database.Port, c.Database.Username, c.Database.Password, c.Database.Name)
 
