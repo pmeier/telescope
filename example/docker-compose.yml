@@ -19,12 +19,16 @@ services:
       interval: 10s
       timeout: 3s
       retries: 2
+    restart: unless-stopped
 
   redgiant:
     container_name: redgiant
     image: ghcr.io/pmeier/redgiant:latest
     environment:
       SUNGROW_HOST: ${SUNGROW_HOST}
+    ports:
+      - 8000:80
+    restart: unless-stopped
 
   telescope:
     container_name: telescope

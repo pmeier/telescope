@@ -19,6 +19,7 @@ type TelescopeConfig struct {
 
 type RedgiantConfig struct {
 	Host string `validate:"required"`
+	Port uint   `validate:"required"`
 }
 
 type DatabaseConfig struct {
@@ -43,6 +44,8 @@ func NewViper() *Viper {
 	v := Viper{Viper: viper.New()}
 	v.SetConfigName("telescope")
 	v.AddConfigPath("/etc/telescope")
+	v.AddConfigPath("~/.config/telescope")
+	v.AddConfigPath(".")
 	return &v
 }
 

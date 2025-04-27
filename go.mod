@@ -7,7 +7,7 @@ require (
 	github.com/go-playground/validator/v10 v10.26.0
 	github.com/go-viper/mapstructure/v2 v2.2.1
 	github.com/labstack/echo/v4 v4.13.3
-	github.com/pmeier/redgiant v0.2.1-0.20250425154820-1f37001e70fd
+	github.com/pmeier/redgiant v0.3.0
 	github.com/rs/zerolog v1.34.0
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/viper v1.20.1

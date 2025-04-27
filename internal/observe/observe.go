@@ -23,13 +23,13 @@ type SummaryTickHandler struct {
 	Log                zerolog.Logger
 	QuantityThresholds map[summary.Quantity]float64
 	TW                 ThresholdWeighter
-	rg                 *rghttp.Client
+	rg                 *rghttp.Redgiant
 	quantityIDS        map[summary.Quantity]uint
 	deviceID           int
 	ts                 timestampedSummary
 }
 
-func (th *SummaryTickHandler) Setup(rg *rghttp.Client) ([]*Quantity, []*Data, error) {
+func (th *SummaryTickHandler) Setup(rg *rghttp.Redgiant) ([]*Quantity, []*Data, error) {
 	th.rg = rg
 
 	qids := map[summary.Quantity]uint{}

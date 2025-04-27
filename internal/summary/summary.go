@@ -53,7 +53,7 @@ func Quantities() []Quantity {
 	}
 }
 
-func GetDeviceID(rg *rghttp.Client) (int, error) {
+func GetDeviceID(rg *rghttp.Redgiant) (int, error) {
 	var deviceID int
 
 	ds, err := rg.Devices()
@@ -74,7 +74,7 @@ func GetDeviceID(rg *rghttp.Client) (int, error) {
 	return deviceID, nil
 }
 
-func Compute(rg *rghttp.Client, deviceID int) (map[Quantity]float32, error) {
+func Compute(rg *rghttp.Redgiant, deviceID int) (map[Quantity]float32, error) {
 	ms, err := rg.RealData(deviceID, redgiant.NoLanguage, "real", "real_battery")
 	if err != nil {
 		return nil, err

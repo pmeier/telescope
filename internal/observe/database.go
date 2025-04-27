@@ -56,6 +56,6 @@ type Data struct {
 }
 
 type TickHandler interface {
-	Setup(*rghttp.Client) ([]*Quantity, []*Data, error)
+	Setup(*rghttp.Redgiant) ([]*Quantity, []*Data, error)
 	Tick(time.Time) ([]*Data, error)
 }

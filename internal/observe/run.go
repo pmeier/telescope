@@ -1,6 +1,7 @@
 package observe
 
 import (
+	"net/http"
 	"os"
 	"time"
 
@@ -26,7 +27,7 @@ func Run(c config.Config) error {
 		TW: ExponentialCutoffThresholdWeighter{D: time.Minute * 5, C: 2},
 	}
 
-	rg := rghttp.NewClient(c.Redgiant.Host)
+	rg := rghttp.NewRedgiant(&http.Client{Timeout: time.Second * 30}, c.Redgiant.Host, c.Redgiant.Port)
 
 	db := NewDB(c.Database.Host, c.Database.Port, c.Database.Username, c.Database.Password, c.Database.Name)
 
