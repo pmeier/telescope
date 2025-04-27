@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pmeier/redgiant"
+	rghttp "github.com/pmeier/redgiant/http"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -56,6 +56,6 @@ type Data struct {
 }
 
 type TickHandler interface {
-	Setup(*redgiant.Redgiant) ([]*Quantity, []*Data, error)
+	Setup(*rghttp.Redgiant) ([]*Quantity, []*Data, error)
 	Tick(time.Time) ([]*Data, error)
 }
