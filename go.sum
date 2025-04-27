@@ -74,16 +74,6 @@ github.com/mitchellh/reflectwalk v1.0.2/go.mod h1:mSTlrgnPZtwu0c4WaC2kGObEpuNDbx
 github.com/pelletier/go-toml/v2 v2.2.3 h1:YmeHyLY8mFWbdkNWwpr+qIL2bEqT0o95WSdkNHvL12M=
 github.com/pelletier/go-toml/v2 v2.2.3/go.mod h1:MfCQTFTvCcUyyvvwm1+G6H/jORL20Xlb6rzQu9GuUkc=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
-github.com/pmeier/redgiant v0.1.6-0.20250405083237-2e562c9b77c6 h1:Q77DMvGkWWhhVUYS52RDN9uenoAepoSz9QmmjbCod1E=
-github.com/pmeier/redgiant v0.1.6-0.20250405083237-2e562c9b77c6/go.mod h1:wF1kh/Sw5L6py1/3Pb8eEDiM7+QB5tetSNGl7WfSFlo=
-github.com/pmeier/redgiant v0.2.1-0.20250425154820-1f37001e70fd h1:g0Wa+StGygyNJVK7yxNRLEGrf7k9fqWqXoBjbQCg5AU=
-github.com/pmeier/redgiant v0.2.1-0.20250425154820-1f37001e70fd/go.mod h1:wF1kh/Sw5L6py1/3Pb8eEDiM7+QB5tetSNGl7WfSFlo=
-github.com/pmeier/redgiant v0.2.1-0.20250427090614-c0152dcec598 h1:lNu9ul+rXiILX/Y3MXctsbm4+21vrOosw8B5UqrH8So=
-github.com/pmeier/redgiant v0.2.1-0.20250427090614-c0152dcec598/go.mod h1:wF1kh/Sw5L6py1/3Pb8eEDiM7+QB5tetSNGl7WfSFlo=
-github.com/pmeier/redgiant v0.2.1-0.20250427092916-a5509ffba826 h1:O2wqFz8tqwORNpMo2PHQbwCpXWl5enAxt7HYkg28u0Y=
-github.com/pmeier/redgiant v0.2.1-0.20250427092916-a5509ffba826/go.mod h1:wF1kh/Sw5L6py1/3Pb8eEDiM7+QB5tetSNGl7WfSFlo=
-github.com/pmeier/redgiant v0.2.1-0.20250427094423-2e956f7c2a33 h1:YxSb7QEyi+oLe4HrFttLCqufdJvTFG3wgp+w5OQVuG0=
-github.com/pmeier/redgiant v0.2.1-0.20250427094423-2e956f7c2a33/go.mod h1:wF1kh/Sw5L6py1/3Pb8eEDiM7+QB5tetSNGl7WfSFlo=
 github.com/pmeier/redgiant v0.3.0 h1:re/wDb5iQtZhZ56ND1gjb0zVecLDdj+700BO0thGZRk=
 github.com/pmeier/redgiant v0.3.0/go.mod h1:wF1kh/Sw5L6py1/3Pb8eEDiM7+QB5tetSNGl7WfSFlo=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
