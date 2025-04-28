@@ -1,4 +1,4 @@
-package observe
+package store
 
 import (
 	"fmt"
@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	rghttp "github.com/pmeier/redgiant/http"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -53,9 +52,4 @@ type Data struct {
 	Timestamp  time.Time `gorm:"type:timestamptz(0); not null"`
 	QuantityID uint      `gorm:"not null"`
 	Value      float32   `gorm:"type:real; not null"`
-}
-
-type TickHandler interface {
-	Setup(*rghttp.Redgiant) ([]*Quantity, []*Data, error)
-	Tick(time.Time) ([]*Data, error)
 }
