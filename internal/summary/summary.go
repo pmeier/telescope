@@ -3,6 +3,7 @@ package summary
 import (
 	"errors"
 	"strconv"
+	"time"
 
 	rghttp "github.com/pmeier/redgiant/http"
 
@@ -74,10 +75,18 @@ func GetDeviceID(rg *rghttp.Redgiant) (int, error) {
 	return deviceID, nil
 }
 
-func Compute(rg *rghttp.Redgiant, deviceID int) (map[Quantity]float32, error) {
+type SummaryValues map[Quantity]float32
+
+type Summary struct {
+	Timestamp time.Time
+	Values    SummaryValues
+}
+
+func Compute(rg *rghttp.Redgiant, deviceID int) (Summary, error) {
+	t := time.Now()
 	ms, err := rg.RealData(deviceID, redgiant.NoLanguage, "real", "real_battery")
 	if err != nil {
-		return nil, err
+		return Summary{}, err
 	}
 
 	vs := map[string]float32{}
@@ -89,11 +98,14 @@ func Compute(rg *rghttp.Redgiant, deviceID int) (map[Quantity]float32, error) {
 		vs[m.I18NCode] = float32(v)
 	}
 
-	return map[Quantity]float32{
-		GridPower:    (vs["I18N_CONFIG_KEY_4060"] - vs["I18N_COMMON_FEED_NETWORK_TOTAL_ACTIVE_POWER"]) * 1e3,
-		BatteryPower: (vs["I18N_CONFIG_KEY_3921"] - vs["I18N_CONFIG_KEY_3907"]) * 1e3,
-		PVPower:      vs["I18N_COMMON_TOTAL_DCPOWER"] * 1e3,
-		LoadPower:    vs["I18N_COMMON_LOAD_TOTAL_ACTIVE_POWER"] * 1e3,
-		BatteryLevel: vs["I18N_COMMON_BATTERY_SOC"] * 1e-2,
+	return Summary{
+		Timestamp: t,
+		Values: SummaryValues{
+			GridPower:    (vs["I18N_CONFIG_KEY_4060"] - vs["I18N_COMMON_FEED_NETWORK_TOTAL_ACTIVE_POWER"]) * 1e3,
+			BatteryPower: (vs["I18N_CONFIG_KEY_3921"] - vs["I18N_CONFIG_KEY_3907"]) * 1e3,
+			PVPower:      vs["I18N_COMMON_TOTAL_DCPOWER"] * 1e3,
+			LoadPower:    vs["I18N_COMMON_LOAD_TOTAL_ACTIVE_POWER"] * 1e3,
+			BatteryLevel: vs["I18N_COMMON_BATTERY_SOC"] * 1e-2,
+		},
 	}, nil
 }

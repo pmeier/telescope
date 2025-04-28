@@ -1,109 +1,89 @@
 package observe
 
 import (
-	"math"
+	"net/http"
+	"os"
 	"time"
 
 	rghttp "github.com/pmeier/redgiant/http"
+
+	"github.com/pmeier/telescope/internal/config"
+	"github.com/pmeier/telescope/internal/observe/store"
 	"github.com/pmeier/telescope/internal/summary"
+
 	"github.com/rs/zerolog"
 )
 
-type timestampedValue struct {
-	T time.Time
-	V float32
+type SummaryHandler interface {
+	Setup(config.Config, zerolog.Logger, summary.Summary) error
+	Handle(summary.Summary) error
 }
 
-type timestampedSummary struct {
-	lastTick time.Time
-	tvs      map[summary.Quantity]timestampedValue
-}
-
-type SummaryTickHandler struct {
-	Log                zerolog.Logger
-	QuantityThresholds map[summary.Quantity]float64
-	TW                 ThresholdWeighter
-	rg                 *rghttp.Redgiant
-	quantityIDS        map[summary.Quantity]uint
-	deviceID           int
-	ts                 timestampedSummary
-}
-
-func (th *SummaryTickHandler) Setup(rg *rghttp.Redgiant) ([]*Quantity, []*Data, error) {
-	th.rg = rg
-
-	qids := map[summary.Quantity]uint{}
-	qs := []*Quantity{}
-	for i, sq := range summary.Quantities() {
-		id := uint(i) + 1
-		qids[sq] = id
-
-		qs = append(qs, &Quantity{ID: id, Name: sq.Name(), Unit: sq.Unit()})
-
+func summaryHandlers(c config.Config) []SummaryHandler {
+	// FIXME: make this configurable
+	return []SummaryHandler{
+		&store.StoreSummaryHandler{
+			QuantityThresholds: map[summary.Quantity]float64{
+				summary.GridPower:    50,
+				summary.BatteryPower: 50,
+				summary.PVPower:      50,
+				summary.LoadPower:    50,
+				summary.BatteryLevel: 0.5e-2},
+			TW: store.ExponentialCutoffThresholdWeighter{D: time.Minute * 5, C: 2},
+		},
 	}
-	th.quantityIDS = qids
+}
+
+func Run(c config.Config) error {
+	log := zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr}).With().Timestamp().Logger().Level(zerolog.InfoLevel)
+
+	// FIXME: allow passing logger into HTTP client
+	rg := rghttp.NewRedgiant(&http.Client{Timeout: time.Second * 30}, c.Redgiant.Host, c.Redgiant.Port)
 
 	deviceID, err := summary.GetDeviceID(rg)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
-	th.deviceID = deviceID
 
-	t := time.Now()
+	ths := summaryHandlers(c)
+
 	s, err := summary.Compute(rg, deviceID)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
-	tvs := make(map[summary.Quantity]timestampedValue, len(s))
-	ds := make([]*Data, 0, len(s))
-	for q, v := range s {
-		tvs[q] = timestampedValue{T: t, V: v}
-		ds = append(ds, &Data{Timestamp: t, QuantityID: qids[q], Value: v})
-	}
-	th.ts = timestampedSummary{lastTick: t, tvs: tvs}
-
-	return qs, ds, nil
-}
-
-func (th *SummaryTickHandler) Tick(t time.Time) ([]*Data, error) {
-	s, err := summary.Compute(th.rg, th.deviceID)
-	if err != nil {
-		return nil, err
-	}
-
-	ds := []*Data{}
-	for q, v := range s {
-		tv := th.ts.tvs[q]
-		if math.Abs(float64(tv.V-v)) <= th.QuantityThresholds[q]*th.TW.Weight(t.Sub(tv.T)) {
-			continue
+	for _, th := range ths {
+		if err := th.Setup(c, log, s); err != nil {
+			return err
 		}
-
-		qid := th.quantityIDS[q]
-		ds = append(ds, &Data{Timestamp: th.ts.lastTick, QuantityID: qid, Value: tv.V})
-		ds = append(ds, &Data{Timestamp: t, QuantityID: qid, Value: v})
-		th.ts.tvs[q] = timestampedValue{T: t, V: v}
 	}
 
-	th.ts.lastTick = t
+	// FIXME: make this configurable
+	for range ticks(time.Second * 5) {
+		s, err := summary.Compute(rg, deviceID)
+		if err != nil {
+			return err
+		}
+		// FIXME: check if all values are 0 and continue if so
 
-	return ds, nil
-}
-
-type ThresholdWeighter interface {
-	Weight(d time.Duration) float64
-}
-
-type ExponentialCutoffThresholdWeighter struct {
-	D time.Duration
-	C float64
-}
-
-func (w ExponentialCutoffThresholdWeighter) Weight(d time.Duration) float64 {
-	// w(d <= D) = 1
-	// w(d = 2*D) = 1 / C
-	// w(d -> oo) -> 0
-	if d <= w.D {
-		return 1.0
+		for _, th := range ths {
+			if err := th.Handle(s); err != nil {
+				return err
+			}
+		}
 	}
-	return math.Pow(w.C, 1.0-(d.Seconds()/w.D.Seconds()))
+
+	return nil
+}
+
+func ticks(d time.Duration) <-chan time.Time {
+	t := make(chan time.Time)
+
+	go func() {
+		t <- time.Now()
+		for now := range time.NewTicker(d).C {
+			t <- now
+		}
+	}()
+
+	return t
 }
