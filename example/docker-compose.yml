@@ -28,12 +28,21 @@ services:
       SUNGROW_HOST: ${SUNGROW_HOST}
     ports:
       - 8000:80
+    healthcheck:
+      start_period: 60s
+      start_interval: 1s
+      interval: 10s
+      timeout: 1s
+      retries: 2
     restart: unless-stopped
 
   telescope:
     container_name: telescope
     image: ghcr.io/pmeier/telescope:latest
     depends_on:
+      redgiant:
+        condition: service_healthy
+        restart: true
       postgres:
         condition: service_healthy
         restart: true

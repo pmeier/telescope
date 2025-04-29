@@ -5,11 +5,12 @@ import (
 	"os"
 	"time"
 
-	rghttp "github.com/pmeier/redgiant/http"
-
 	"github.com/pmeier/telescope/internal/config"
 	"github.com/pmeier/telescope/internal/observe/store"
+	"github.com/pmeier/telescope/internal/observe/ui"
 	"github.com/pmeier/telescope/internal/summary"
+
+	rghttp "github.com/pmeier/redgiant/http"
 
 	"github.com/rs/zerolog"
 )
@@ -31,6 +32,7 @@ func summaryHandlers(c config.Config) []SummaryHandler {
 				summary.BatteryLevel: 0.5e-2},
 			TW: store.ExponentialCutoffThresholdWeighter{D: time.Minute * 5, C: 2},
 		},
+		&ui.UISummaryHandler{},
 	}
 }
 
@@ -66,6 +68,7 @@ func Run(c config.Config) error {
 		// FIXME: check if all values are 0 and continue if so
 
 		for _, th := range ths {
+			// FIXME goroutine?
 			if err := th.Handle(s); err != nil {
 				return err
 			}

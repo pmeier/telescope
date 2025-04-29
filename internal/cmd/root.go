@@ -28,19 +28,19 @@ func runFunc(fn func(config.Config) error) func(*cobra.Command, []string) {
 		var code int
 		if err := func() error {
 			v := config.NewViper()
-			if err := v.ReadInConfig(); err != nil {
+			if err := v.ReadAndMergeInConfigs(); err != nil {
 				return err
 			}
 
-			var c config.Config
-			if err := v.Unmarshal(&c); err != nil {
+			c := config.New()
+			if err := v.Unmarshal(c); err != nil {
 				return err
 			}
-			if err := validate.Struct(&c); err != nil {
+			if err := validate.Struct(c); err != nil {
 				return err
 			}
 
-			return fn(c)
+			return fn(*c)
 		}(); err != nil {
 			fmt.Printf("Error: %s\n", err.Error())
 			code = 1
