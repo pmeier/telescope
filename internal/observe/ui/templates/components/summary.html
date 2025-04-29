@@ -1,0 +1,7 @@
+<ul id="summary" class="list-group" hx-swap-oon="true">
+    <li class="list-group-item">Grid Power: {{ printf "%.1f kW" (mulf .GridPower 1e-3) }}</li>
+    <li class="list-group-item">PV Power: {{ printf "%.1f kW" (mulf .PVPower 1e-3) }}</li>
+    <li class="list-group-item">Battery Power: {{ printf "%.1f kW" (mulf .BatteryPower 1e-3) }}</li>
+    <li class="list-group-item">Load Power: {{ printf "%.1f kW" (mulf .LoadPower 1e-3) }}</li>
+    <li class="list-group-item">Battery Level: {{ printf "%.1f %%" (mulf .BatteryLevel 1e2) }}</li>
+</ul>

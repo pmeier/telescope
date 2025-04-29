@@ -1,0 +1,12 @@
+telescope:
+  host: "127.0.0.1"
+  port: 8001
+database:
+  username: postgres
+  password: password
+  host: "127.0.0.1"
+  port: 5432
+  name: postgres
+redgiant:
+  host: "127.0.0.1"
+  port: 8000

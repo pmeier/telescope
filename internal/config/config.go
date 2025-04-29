@@ -43,8 +43,9 @@ type Viper struct {
 func NewViper() *Viper {
 	v := Viper{Viper: viper.New()}
 	v.SetConfigName("telescope")
-	v.AddConfigPath("/etc/telescope")
-	v.AddConfigPath("~/.config/telescope")
+	// FIXME
+	// v.AddConfigPath("/etc/telescope")
+	// v.AddConfigPath("~/.config/telescope")
 	v.AddConfigPath(".")
 	return &v
 }
