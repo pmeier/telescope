@@ -13,18 +13,18 @@ import (
 )
 
 type TelescopeConfig struct {
-	Host string `validate:"required"`
-	Port uint   `validate:"required"`
+	Host string
+	Port uint
 }
 
 type RedgiantConfig struct {
-	Host string `validate:"required"`
-	Port uint   `validate:"required"`
+	Host string
+	Port uint
 }
 
 type DatabaseConfig struct {
 	Username string
-	Password string
+	Password string `validate:"required"`
 	Host     string
 	Port     uint
 	Name     string
@@ -36,6 +36,25 @@ type Config struct {
 	Database  DatabaseConfig
 }
 
+func New() *Config {
+	return &Config{
+		Telescope: TelescopeConfig{
+			Host: "127.0.0.1",
+			Port: 8001,
+		},
+		Redgiant: RedgiantConfig{
+			Host: "127.0.0.1",
+			Port: 8000,
+		},
+		Database: DatabaseConfig{
+			Username: "postgres",
+			Host:     "127.0.0.1",
+			Port:     5432,
+			Name:     "postgres",
+		},
+	}
+}
+
 type Viper struct {
 	*viper.Viper
 }
@@ -43,11 +62,27 @@ type Viper struct {
 func NewViper() *Viper {
 	v := Viper{Viper: viper.New()}
 	v.SetConfigName("telescope")
-	// FIXME
-	// v.AddConfigPath("/etc/telescope")
-	// v.AddConfigPath("~/.config/telescope")
-	v.AddConfigPath(".")
 	return &v
+}
+
+func (v *Viper) ReadAndMergeInConfigs() error {
+	for _, in := range []string{
+		"/etc/telescope",
+		"$HOME/.config/telescope",
+		".",
+	} {
+		vv := NewViper()
+		vv.AddConfigPath(in)
+		if err := vv.ReadInConfig(); err != nil {
+			if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+				return err
+			}
+		}
+
+		v.MergeConfigMap(vv.AllSettings())
+	}
+
+	return nil
 }
 
 func (v *Viper) Unmarshal(rawVal any) error {
