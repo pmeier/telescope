@@ -13,7 +13,6 @@ FROM gcr.io/distroless/static-debian12
 COPY --from=build /bin/telescope /
 
 ENV TELESCOPE_HOST=0.0.0.0
-ENV TELESCOPE_PORT=80
 
 ENTRYPOINT ["/telescope"]
 CMD ["observe"]
