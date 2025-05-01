@@ -14,11 +14,12 @@ type UISummaryHandler struct {
 	s *Server
 }
 
-func (sh *UISummaryHandler) Setup(c config.Config, log zerolog.Logger, s summary.Summary) error {
+func (sh *UISummaryHandler) Setup(c any, log zerolog.Logger, s summary.Summary) error {
+	uc := c.(config.UIConfig)
 	sh.s = NewServer(log)
 
-	host := c.Telescope.Host
-	port := c.Telescope.Port
+	host := uc.Host
+	port := uc.Port
 	log = log.With().Str("host", host).Uint("port", port).Logger()
 	log.Info().Msg("starting")
 

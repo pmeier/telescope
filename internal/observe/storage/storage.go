@@ -1,4 +1,4 @@
-package store
+package storage
 
 import (
 	"math"
@@ -19,18 +19,32 @@ type timestampedSummary struct {
 	tvs      map[summary.Quantity]timestampedValue
 }
 
-type StoreSummaryHandler struct {
-	Log                zerolog.Logger
-	QuantityThresholds map[summary.Quantity]float64
-	TW                 ThresholdWeighter
-	db                 *DB
-	quantityIDS        map[summary.Quantity]uint
-	ts                 timestampedSummary
+type StorageSummaryHandler struct {
+	Log         zerolog.Logger
+	thresholds  map[summary.Quantity]float64
+	tw          ThresholdWeighter
+	db          *DB
+	quantityIDS map[summary.Quantity]uint
+	ts          timestampedSummary
 }
 
-func (sh *StoreSummaryHandler) Setup(c config.Config, log zerolog.Logger, s summary.Summary) error {
-	db := NewDB(c.Database.Host, c.Database.Port, c.Database.Username, c.Database.Password, c.Database.Name)
+func (sh *StorageSummaryHandler) Setup(c any, log zerolog.Logger, s summary.Summary) error {
+	sc := c.(config.StorageConfig)
+	db := NewDB(sc.Database.Host, sc.Database.Port, sc.Database.Username, sc.Database.Password, sc.Database.Name)
 	sh.db = db
+
+	sh.thresholds = map[summary.Quantity]float64{
+		summary.GridPower:    sc.Thresholds.GridPower,
+		summary.BatteryPower: sc.Thresholds.BatteryPower,
+		summary.PVPower:      sc.Thresholds.PVPower,
+		summary.LoadPower:    sc.Thresholds.LoadPower,
+		summary.BatteryLevel: sc.Thresholds.BatteryLevel,
+	}
+
+	sh.tw = ExponentialCutoffThresholdWeighter{
+		Start:  sc.ThresholdWeighter.Start,
+		Factor: sc.ThresholdWeighter.Factor,
+	}
 
 	qids := map[summary.Quantity]uint{}
 	qs := []*Quantity{}
@@ -56,11 +70,11 @@ func (sh *StoreSummaryHandler) Setup(c config.Config, log zerolog.Logger, s summ
 	return nil
 }
 
-func (sh *StoreSummaryHandler) Handle(s summary.Summary) error {
+func (sh *StorageSummaryHandler) Handle(s summary.Summary) error {
 	ds := []*Data{}
 	for q, v := range s.Values {
 		tv := sh.ts.tvs[q]
-		if math.Abs(float64(tv.V-v)) <= sh.QuantityThresholds[q]*sh.TW.Weight(s.Timestamp.Sub(tv.T)) {
+		if math.Abs(float64(tv.V-v)) <= sh.thresholds[q]*sh.tw.Weight(s.Timestamp.Sub(tv.T)) {
 			continue
 		}
 
@@ -83,16 +97,16 @@ type ThresholdWeighter interface {
 }
 
 type ExponentialCutoffThresholdWeighter struct {
-	D time.Duration
-	C float64
+	Start  time.Duration
+	Factor float64
 }
 
 func (w ExponentialCutoffThresholdWeighter) Weight(d time.Duration) float64 {
-	// w(d <= D) = 1
-	// w(d = 2*D) = 1 / C
+	// w(d <= Start) = 1
+	// w(d = 2*Start) = 1 / Factor
 	// w(d -> oo) -> 0
-	if d <= w.D {
+	if d <= w.Start {
 		return 1.0
 	}
-	return math.Pow(w.C, 1.0-(d.Seconds()/w.D.Seconds()))
+	return math.Pow(w.Factor, 1.0-(d.Seconds()/w.Start.Seconds()))
 }

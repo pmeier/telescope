@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/pmeier/telescope/internal/config"
-	"github.com/pmeier/telescope/internal/observe/store"
+	"github.com/pmeier/telescope/internal/observe/storage"
 	"github.com/pmeier/telescope/internal/observe/ui"
 	"github.com/pmeier/telescope/internal/summary"
 
@@ -16,22 +16,13 @@ import (
 )
 
 type SummaryHandler interface {
-	Setup(config.Config, zerolog.Logger, summary.Summary) error
+	Setup(any, zerolog.Logger, summary.Summary) error
 	Handle(summary.Summary) error
 }
 
 func summaryHandlers(c config.Config) []SummaryHandler {
-	// FIXME: make this configurable
 	return []SummaryHandler{
-		&store.StoreSummaryHandler{
-			QuantityThresholds: map[summary.Quantity]float64{
-				summary.GridPower:    50,
-				summary.BatteryPower: 50,
-				summary.PVPower:      50,
-				summary.LoadPower:    50,
-				summary.BatteryLevel: 0.5e-2},
-			TW: store.ExponentialCutoffThresholdWeighter{D: time.Minute * 5, C: 2},
-		},
+		&storage.StorageSummaryHandler{},
 		&ui.UISummaryHandler{},
 	}
 }
@@ -59,8 +50,7 @@ func Run(c config.Config) error {
 		}
 	}
 
-	// FIXME: make this configurable
-	for range ticks(time.Second * 5) {
+	for range ticks(c.Observe.SampleInterval) {
 		s, err := summary.Compute(rg, deviceID)
 		if err != nil {
 			return err

@@ -2,20 +2,18 @@ package config
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"reflect"
 	"strings"
 	"text/template"
+	"time"
 
 	"github.com/Masterminds/sprig/v3"
+	"github.com/go-playground/validator/v10"
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/spf13/viper"
 )
-
-type TelescopeConfig struct {
-	Host string
-	Port uint
-}
 
 type RedgiantConfig struct {
 	Host string
@@ -30,48 +28,126 @@ type DatabaseConfig struct {
 	Name     string
 }
 
-type Config struct {
-	Telescope TelescopeConfig
-	Redgiant  RedgiantConfig
-	Database  DatabaseConfig
+type ThresholdsConfig struct {
+	GridPower    float64
+	BatteryPower float64
+	PVPower      float64
+	LoadPower    float64
+	BatteryLevel float64
 }
 
-func New() *Config {
-	return &Config{
-		Telescope: TelescopeConfig{
-			Host: "127.0.0.1",
-			Port: 8001,
-		},
+type ThresholdWeighterConfig struct {
+	Start  time.Duration
+	Factor float64
+}
+
+type StorageConfig struct {
+	Database          DatabaseConfig
+	Thresholds        ThresholdsConfig
+	ThresholdWeighter ThresholdWeighterConfig
+}
+
+type UIConfig struct {
+	Host string
+	Port uint
+}
+
+type ObserveConfig struct {
+	// FIXME log level
+	SampleInterval time.Duration
+	Storage        StorageConfig
+	UI             UIConfig
+}
+
+type Config struct {
+	Redgiant RedgiantConfig
+	Observe  ObserveConfig
+}
+
+func Load() (*Config, error) {
+	v := viper.New()
+
+	if err := loadDefaults(v); err != nil {
+		return nil, err
+	}
+
+	if err := loadFromFiles(v, "telescope",
+		"/etc/telescope",
+		"$HOME/.config/telescope",
+		".",
+	); err != nil {
+		return nil, err
+	}
+
+	enableLoadFromEnvVars(v, "TELESCOPE")
+
+	c := &Config{}
+	if err := v.Unmarshal(c, func(dc *mapstructure.DecoderConfig) { dc.DecodeHook = templating() }); err != nil {
+		return nil, err
+	}
+
+	validate := validator.New(validator.WithRequiredStructEnabled())
+	if err := validate.Struct(c); err != nil {
+		return nil, err
+	}
+
+	return c, nil
+}
+
+func loadDefaults(v *viper.Viper) error {
+	dc := Config{
 		Redgiant: RedgiantConfig{
 			Host: "127.0.0.1",
 			Port: 8000,
 		},
-		Database: DatabaseConfig{
-			Username: "postgres",
-			Host:     "127.0.0.1",
-			Port:     5432,
-			Name:     "postgres",
+		Observe: ObserveConfig{
+			SampleInterval: time.Second * 5,
+			Storage: StorageConfig{
+				Database: DatabaseConfig{
+					Username: "postgres",
+					Host:     "127.0.0.1",
+					Port:     5432,
+					Name:     "postgres",
+				},
+				Thresholds: ThresholdsConfig{
+					GridPower:    50,
+					BatteryPower: 50,
+					PVPower:      50,
+					LoadPower:    50,
+					BatteryLevel: 0.5e-2,
+				},
+				ThresholdWeighter: ThresholdWeighterConfig{
+					Start:  time.Minute * 5,
+					Factor: 2,
+				},
+			},
+			UI: UIConfig{
+				Host: "127.0.0.1",
+				Port: 8001,
+			},
 		},
 	}
+
+	b, err := json.Marshal(dc)
+	if err != nil {
+		return err
+	}
+
+	r := bytes.NewReader(b)
+	vv := viper.New()
+	vv.SetConfigType("json")
+	if err := vv.MergeConfig(r); err != nil {
+		return err
+	}
+
+	v.MergeConfigMap(vv.AllSettings())
+	return nil
 }
 
-type Viper struct {
-	*viper.Viper
-}
-
-func NewViper() *Viper {
-	v := Viper{Viper: viper.New()}
-	v.SetConfigName("telescope")
-	return &v
-}
-
-func (v *Viper) ReadAndMergeInConfigs() error {
-	for _, in := range []string{
-		"/etc/telescope",
-		"$HOME/.config/telescope",
-		".",
-	} {
-		vv := NewViper()
+func loadFromFiles(v *viper.Viper, configName string, paths ...string) error {
+	for _, in := range paths {
+		vv := viper.New()
+		vv.SetConfigName(configName)
 		vv.AddConfigPath(in)
 		if err := vv.ReadInConfig(); err != nil {
 			if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
@@ -85,11 +161,14 @@ func (v *Viper) ReadAndMergeInConfigs() error {
 	return nil
 }
 
-func (v *Viper) Unmarshal(rawVal any) error {
-	return v.Viper.Unmarshal(rawVal, func(dc *mapstructure.DecoderConfig) { dc.DecodeHook = envVarTemplating() })
+func enableLoadFromEnvVars(v *viper.Viper, prefix string) error {
+	v.AutomaticEnv()
+	v.SetEnvPrefix(prefix)
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	return nil
 }
 
-func envVarTemplating() mapstructure.DecodeHookFuncType {
+func templating() mapstructure.DecodeHookFuncType {
 	e := map[string]string{}
 	for _, kv := range os.Environ() {
 		s := strings.SplitN(kv, "=", 2)
