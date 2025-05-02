@@ -63,6 +63,9 @@ func NewServer(log zerolog.Logger) *Server {
 	}
 
 	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
+		Skipper: func(c echo.Context) bool {
+			return c.Request().URL.Path == "/health" && log.GetLevel() > zerolog.DebugLevel
+		},
 		LogRemoteIP: true,
 		LogURI:      true,
 		LogStatus:   true,
