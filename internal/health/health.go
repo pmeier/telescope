@@ -18,9 +18,11 @@ func HealthRouteFunc() (string, string, echo.HandlerFunc) {
 }
 
 func IsHealthy(host string, port uint) bool {
-	r, err := http.Get((&url.URL{Scheme: "http",
-		Host: fmt.Sprintf("%s:%d", host, port),
-		Path: "/health"}).String())
+	r, err := http.Get(
+		(&url.URL{
+			Scheme: "http",
+			Host:   fmt.Sprintf("%s:%d", host, port),
+			Path:   "/health"}).String())
 	if err == nil && r.StatusCode == http.StatusOK {
 		return true
 	} else {
@@ -45,7 +47,7 @@ func WaitForHealthy(host string, port uint, d time.Duration) error {
 }
 
 func Run(c config.Config) error {
-	if IsHealthy(c.Telescope.Host, c.Telescope.Port) {
+	if IsHealthy(c.Observe.UI.Host, c.Observe.UI.Port) {
 		return nil
 	} else {
 		return errors.New("server not healthy")
