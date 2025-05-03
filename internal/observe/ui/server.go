@@ -105,9 +105,13 @@ func ws(s *Server) (string, string, echo.HandlerFunc) {
 		}
 
 		id := uuid.New()
+
+		log := s.log.With().Str("origin", c.RealIP()).Stringer("id", id).Logger()
+
 		s.mu.Lock()
 		s.wss[id] = ws
 		s.mu.Unlock()
+		log.Info().Msg("websocket connected")
 
 		for {
 			_, msg, err := ws.ReadMessage()
@@ -117,13 +121,15 @@ func ws(s *Server) (string, string, echo.HandlerFunc) {
 				}
 				break
 			}
-			s.log.Warn().Bytes("message", msg).Msg("ignoring received message")
+			log.Warn().Bytes("message", msg).Msg("ignoring received websocket message")
 		}
 
 		s.mu.Lock()
 		delete(s.wss, id)
 		s.mu.Unlock()
 		ws.Close()
+
+		log.Info().Msg("websocket closed")
 
 		return nil
 	}
