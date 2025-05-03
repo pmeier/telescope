@@ -14,8 +14,8 @@ type UISummaryHandler struct {
 	s *Server
 }
 
-func (sh *UISummaryHandler) Setup(c any, log zerolog.Logger, s summary.Summary) error {
-	uc := c.(config.UIConfig)
+func (sh *UISummaryHandler) Setup(c config.ObserveConfig, log zerolog.Logger, s summary.Summary) error {
+	uc := c.UI
 	sh.s = NewServer(log)
 
 	host := uc.Host

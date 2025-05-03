@@ -16,11 +16,11 @@ import (
 )
 
 type SummaryHandler interface {
-	Setup(any, zerolog.Logger, summary.Summary) error
+	Setup(config.ObserveConfig, zerolog.Logger, summary.Summary) error
 	Handle(summary.Summary) error
 }
 
-func summaryHandlers(c config.Config) []SummaryHandler {
+func summaryHandlers() []SummaryHandler {
 	return []SummaryHandler{
 		&storage.StorageSummaryHandler{},
 		&ui.UISummaryHandler{},
@@ -38,14 +38,14 @@ func Run(c config.Config) error {
 		return err
 	}
 
-	ths := summaryHandlers(c)
+	ths := summaryHandlers()
 
 	s, err := summary.Compute(rg, deviceID)
 	if err != nil {
 		return err
 	}
 	for _, th := range ths {
-		if err := th.Setup(c, log, s); err != nil {
+		if err := th.Setup(c.Observe, log, s); err != nil {
 			return err
 		}
 	}
