@@ -29,7 +29,10 @@ func runFunc(fn func(config.Config) error) func(*cobra.Command, []string) {
 				return err
 			}
 
-			return fn(*c)
+			fmt.Printf("%+v\n", c)
+			return nil
+
+			// return fn(*c)
 		}(); err != nil {
 			fmt.Printf("Error: %s\n", err.Error())
 			code = 1

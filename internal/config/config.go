@@ -12,6 +12,7 @@ import (
 	"github.com/Masterminds/sprig/v3"
 	"github.com/go-playground/validator/v10"
 	"github.com/go-viper/mapstructure/v2"
+	"github.com/rs/zerolog"
 	"github.com/spf13/viper"
 )
 
@@ -53,13 +54,13 @@ type UIConfig struct {
 }
 
 type ObserveConfig struct {
-	// FIXME log level
 	SampleInterval time.Duration
 	Storage        StorageConfig
 	UI             UIConfig
 }
 
 type Config struct {
+	LogLevel zerolog.Level
 	Redgiant RedgiantConfig
 	Observe  ObserveConfig
 }
@@ -82,7 +83,14 @@ func Load() (*Config, error) {
 	enableLoadFromEnvVars(v, "TELESCOPE")
 
 	c := &Config{}
-	if err := v.Unmarshal(c, func(dc *mapstructure.DecoderConfig) { dc.DecodeHook = templating() }); err != nil {
+	if err := v.Unmarshal(c, func(dc *mapstructure.DecoderConfig) {
+
+		dc.DecodeHook = mapstructure.ComposeDecodeHookFunc(
+			stringTemplatingHookFunc(),
+			mapstructure.StringToTimeDurationHookFunc(),
+			stringToZerologLevelHookFunc(),
+		)
+	}); err != nil {
 		return nil, err
 	}
 
@@ -96,6 +104,7 @@ func Load() (*Config, error) {
 
 func loadDefaults(v *viper.Viper) error {
 	dc := Config{
+		LogLevel: zerolog.InfoLevel,
 		Redgiant: RedgiantConfig{
 			Host: "127.0.0.1",
 			Port: 8000,
@@ -168,7 +177,7 @@ func enableLoadFromEnvVars(v *viper.Viper, prefix string) error {
 	return nil
 }
 
-func templating() mapstructure.DecodeHookFuncType {
+func stringTemplatingHookFunc() mapstructure.DecodeHookFuncType {
 	e := map[string]string{}
 	for _, kv := range os.Environ() {
 		s := strings.SplitN(kv, "=", 2)
@@ -196,5 +205,19 @@ func templating() mapstructure.DecodeHookFuncType {
 		default:
 			return v, nil
 		}
+	}
+}
+
+func stringToZerologLevelHookFunc() mapstructure.DecodeHookFuncType {
+	return func(
+		f reflect.Type,
+		t reflect.Type,
+		data any,
+	) (any, error) {
+		if f.Kind() != reflect.String || t != reflect.TypeOf(zerolog.NoLevel) {
+			return data, nil
+		}
+
+		return zerolog.ParseLevel(data.(string))
 	}
 }
