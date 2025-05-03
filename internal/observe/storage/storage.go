@@ -28,8 +28,8 @@ type StorageSummaryHandler struct {
 	ts          timestampedSummary
 }
 
-func (sh *StorageSummaryHandler) Setup(c any, log zerolog.Logger, s summary.Summary) error {
-	sc := c.(config.StorageConfig)
+func (sh *StorageSummaryHandler) Setup(c config.ObserveConfig, log zerolog.Logger, s summary.Summary) error {
+	sc := c.Storage
 	db := NewDB(sc.Database.Host, sc.Database.Port, sc.Database.Username, sc.Database.Password, sc.Database.Name)
 	sh.db = db
 
