@@ -145,10 +145,13 @@ func (s *Server) UpdateData(sm *summary.Summary) {
 
 	var b bytes.Buffer
 	s.tg.ExecuteTemplate(&b, "components/summary.html", &s.data)
+	data := b.Bytes()
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
 	for _, ws := range s.wss {
-		err := ws.WriteMessage(websocket.TextMessage, b.Bytes())
+		err := ws.WriteMessage(websocket.TextMessage, data)
 		if err != nil && err != websocket.ErrCloseSent {
 			s.log.Error().Err(err).Send()
 		}
