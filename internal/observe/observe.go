@@ -4,6 +4,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/pmeier/redgiant"
 	"github.com/pmeier/telescope/internal/config"
 	"github.com/pmeier/telescope/internal/observe/storage"
 	"github.com/pmeier/telescope/internal/observe/ui"
@@ -29,8 +30,7 @@ func summaryHandlers() []SummaryHandler {
 func Run(c config.Config) error {
 	log := zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr}).With().Timestamp().Logger().Level(zerolog.InfoLevel)
 
-	// FIXME: allow passing logger into HTTP client
-	rg := rghttp.NewRedgiant(c.Redgiant.Host, c.Redgiant.Port)
+	rg := rghttp.NewRedgiant(c.Redgiant.Host, c.Redgiant.Port, redgiant.WithLogger(log))
 
 	deviceID, err := summary.GetDeviceID(rg)
 	if err != nil {
