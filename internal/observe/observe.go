@@ -1,7 +1,6 @@
 package observe
 
 import (
-	"net/http"
 	"os"
 	"time"
 
@@ -31,7 +30,7 @@ func Run(c config.Config) error {
 	log := zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr}).With().Timestamp().Logger().Level(zerolog.InfoLevel)
 
 	// FIXME: allow passing logger into HTTP client
-	rg := rghttp.NewRedgiant(&http.Client{Timeout: time.Second * 30}, c.Redgiant.Host, c.Redgiant.Port)
+	rg := rghttp.NewRedgiant(c.Redgiant.Host, c.Redgiant.Port)
 
 	deviceID, err := summary.GetDeviceID(rg)
 	if err != nil {
