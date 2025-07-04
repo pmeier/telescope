@@ -3,8 +3,11 @@ package config
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
+	"io"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -14,7 +17,66 @@ import (
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/rs/zerolog"
 	"github.com/spf13/viper"
+	"golang.org/x/term"
 )
+
+type LoggingFormat uint8
+
+const (
+	AutoLoggingFormat LoggingFormat = iota
+	ConsoleLoggingFormat
+	JSONLoggingFormat
+)
+
+func (f LoggingFormat) String() string {
+	switch f {
+	case AutoLoggingFormat:
+		return "auto"
+	case ConsoleLoggingFormat:
+		return "console"
+	case JSONLoggingFormat:
+		return "json"
+	default:
+		return strconv.Itoa(int(f))
+	}
+}
+
+func ParseLoggingFormat(formatStr string) (LoggingFormat, error) {
+	for _, lang := range []LoggingFormat{
+		AutoLoggingFormat,
+		ConsoleLoggingFormat,
+		JSONLoggingFormat,
+	} {
+		if strings.EqualFold(formatStr, lang.String()) {
+			return lang, nil
+		}
+	}
+	return AutoLoggingFormat, errors.New("unknown language")
+}
+
+func (f LoggingFormat) Writer() io.Writer {
+	if f == AutoLoggingFormat {
+		if term.IsTerminal(int(os.Stdout.Fd())) {
+			f = ConsoleLoggingFormat
+		} else {
+			f = JSONLoggingFormat
+		}
+	}
+
+	switch f {
+	case ConsoleLoggingFormat:
+		return zerolog.ConsoleWriter{Out: os.Stdout}
+	case JSONLoggingFormat:
+		return os.Stdout
+	default:
+		panic("unknown logging format")
+	}
+}
+
+type LoggingConfig struct {
+	Level  zerolog.Level
+	Format LoggingFormat
+}
 
 type RedgiantConfig struct {
 	Host string
@@ -60,7 +122,7 @@ type ObserveConfig struct {
 }
 
 type Config struct {
-	LogLevel zerolog.Level
+	Logging  LoggingConfig
 	Redgiant RedgiantConfig
 	Observe  ObserveConfig
 }
@@ -89,6 +151,7 @@ func Load() (*Config, error) {
 			stringTemplatingHookFunc(),
 			mapstructure.StringToTimeDurationHookFunc(),
 			stringToZerologLevelHookFunc(),
+			stringToLoggingFormatHookFunc(),
 		)
 	}); err != nil {
 		return nil, err
@@ -104,7 +167,10 @@ func Load() (*Config, error) {
 
 func loadDefaults(v *viper.Viper) error {
 	dc := Config{
-		LogLevel: zerolog.InfoLevel,
+		Logging: LoggingConfig{
+			Level:  zerolog.InfoLevel,
+			Format: AutoLoggingFormat,
+		},
 		Redgiant: RedgiantConfig{
 			Host: "127.0.0.1",
 			Port: 8000,
@@ -219,5 +285,19 @@ func stringToZerologLevelHookFunc() mapstructure.DecodeHookFuncType {
 		}
 
 		return zerolog.ParseLevel(data.(string))
+	}
+}
+
+func stringToLoggingFormatHookFunc() mapstructure.DecodeHookFuncType {
+	return func(
+		f reflect.Type,
+		t reflect.Type,
+		data any,
+	) (any, error) {
+		if f.Kind() != reflect.String || t != reflect.TypeOf(AutoLoggingFormat) {
+			return data, nil
+		}
+
+		return ParseLoggingFormat(data.(string))
 	}
 }

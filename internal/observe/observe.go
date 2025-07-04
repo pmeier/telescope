@@ -1,7 +1,6 @@
 package observe
 
 import (
-	"os"
 	"time"
 
 	"github.com/pmeier/redgiant"
@@ -28,7 +27,7 @@ func summaryHandlers() []SummaryHandler {
 }
 
 func Run(c config.Config) error {
-	log := zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr}).With().Timestamp().Logger().Level(zerolog.InfoLevel)
+	log := zerolog.New(c.Logging.Format.Writer()).With().Timestamp().Logger().Level(c.Logging.Level)
 
 	rg := rghttp.NewRedgiant(c.Redgiant.Host, c.Redgiant.Port, redgiant.WithLogger(log))
 
